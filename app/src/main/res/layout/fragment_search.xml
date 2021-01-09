@@ -28,6 +28,17 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent">
 
+            <TextView
+                android:id="@+id/textViewSearchViewSourceCode"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="10dp"
+                android:layout_marginTop="5dp"
+                android:fontFamily="@font/open_sans"
+                android:text="View Source Code"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
             <Button
                 android:id="@+id/buttonSearchSave"
                 android:layout_width="140dp"
@@ -81,7 +92,7 @@
                 app:layout_constraintStart_toStartOf="parent" />
 
             <TextView
-                android:id="@+id/textView6"
+                android:id="@+id/textViewSearchUpdates"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="13dp"
@@ -145,7 +156,7 @@
                     android:layout_marginStart="15dp"
                     android:layout_marginTop="15dp"
                     android:fontFamily="@font/open_sans"
-                    android:text="1. Make sure the app is up-to-date.\n2. When downloading, refrain from minimizing the app, as it would limit the bandwith usage. \n3. Remember that this version only works for Spotify playlists (at least for now)."
+                    android:text="1. Make sure the app is up-to-date.\n2. Resume terminated downloads from the downloads tab.\n3. Remember that this version only works for Spotify playlists (at least for now)."
                     android:textColor="@color/colorPrimaryDark"
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintEnd_toEndOf="parent"
@@ -198,6 +209,17 @@
                     app:layout_constraintTop_toTopOf="parent" />
 
             </androidx.constraintlayout.widget.ConstraintLayout>
+
+            <TextView
+                android:id="@+id/textViewSearchVersion"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:layout_marginTop="5dp"
+                android:fontFamily="@font/open_sans"
+                android:text="Version 1.1"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>
 

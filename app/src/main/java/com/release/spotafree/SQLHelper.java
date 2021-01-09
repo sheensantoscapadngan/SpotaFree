@@ -9,11 +9,14 @@ import android.util.Log;
 
 public class SQLHelper extends SQLiteOpenHelper {
 
-    public static final String DATABASE_NAME = "Downloads.db";
+    public static final String DATABASE_NAME = "downloads.db";
     public static final String TABLE_NAME = "Downloaded";
     public static final String COL_1 = "ID";
     public static final String COL_2 = "NAME";
-    public static final String COL_3 = "URL";
+    public static final String COL_3 = "PLAYLIST_URL";
+    public static final String COL_4 = "PLAYLIST_FOLDER_DIR";
+    public static final String COL_5 = "DUPLICATE_DIR";
+    public static final String COL_6 = "LAST_INDEX";
 
     public SQLHelper(Context context) {
         super(context, DATABASE_NAME, null, 1);
@@ -22,7 +25,8 @@ public class SQLHelper extends SQLiteOpenHelper {
 
     @Override
     public void onCreate(SQLiteDatabase sqLiteDatabase) {
-        sqLiteDatabase.execSQL(" CREATE TABLE IF NOT EXISTS " + TABLE_NAME + " ( ID INTEGER PRIMARY KEY AUTOINCREMENT, NAME STRING, URL STRING)");
+        sqLiteDatabase.execSQL(" CREATE TABLE IF NOT EXISTS " + TABLE_NAME + " ( ID INTEGER PRIMARY KEY AUTOINCREMENT, NAME STRING, PLAYLIST_URL STRING," +
+                "PLAYLIST_FOLDER_DIR STRING, DUPLICATE_DIR STRING, LAST_INDEX INTEGER)");
 
     }
 
@@ -31,15 +35,21 @@ public class SQLHelper extends SQLiteOpenHelper {
 
     }
 
-    public void insertData(String name, String url){
+    public void insertData(String name, String playlistDir, String duplicateDir, String playlistUrl){
 
         SQLiteDatabase db = this.getWritableDatabase();
 
         ContentValues contentValues = new ContentValues();
         contentValues.put(COL_2,name);
-        contentValues.put(COL_3,url);
+        contentValues.put(COL_3,playlistUrl);
+        contentValues.put(COL_4,playlistDir);
+        contentValues.put(COL_5,duplicateDir);
+        contentValues.put(COL_6,0);
 
         long res = db.insert(TABLE_NAME,null,contentValues);
+        if(res != -1){
+            Log.d("MAIN_LOG","SUCCESSFULLY ADDED TO DB");
+        }
 
     }
 
@@ -50,6 +60,17 @@ public class SQLHelper extends SQLiteOpenHelper {
         db.delete(TABLE_NAME,whereClause,whereArgs);
     }
 
+    public void updateLastIndex(String playlistUrl, int lastIndex){
+
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues contentValues = new ContentValues();
+        contentValues.put(COL_6,lastIndex);
+        db.update(TABLE_NAME,contentValues,"PLAYLIST_URL = ?", new String[]{playlistUrl});
+
+
+    }
+
+
     public Cursor getAllData(){
 
         SQLiteDatabase db = this.getWritableDatabase();
@@ -58,13 +79,5 @@ public class SQLHelper extends SQLiteOpenHelper {
 
     }
 
-    public void updateData(String score){
-
-        SQLiteDatabase db = this.getWritableDatabase();
-        ContentValues contentValues = new ContentValues();
-        contentValues.put(COL_2,score);
-        db.update(TABLE_NAME,contentValues,"ID = ?", new String[]{"1"});
-
-    }
 
 }

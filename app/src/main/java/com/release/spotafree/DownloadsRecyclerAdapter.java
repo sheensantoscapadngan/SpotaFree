@@ -25,11 +25,17 @@ public class DownloadsRecyclerAdapter extends RecyclerView.Adapter<DownloadsRecy
     private ArrayList<String> uriList = new ArrayList<>();
     private ArrayList<String> titleList = new ArrayList<>();
     private Context context;
+    private ArrayList<String> playlistUrlList = new ArrayList<>();
+    private ArrayList<Integer> lastIndexList = new ArrayList<>();
+    private ArrayList<String> playlistFolderList = new ArrayList<>();
 
-    public DownloadsRecyclerAdapter(ArrayList<String> uriList, ArrayList<String> titleList, Context context) {
+    public DownloadsRecyclerAdapter(ArrayList<String> uriList, ArrayList<String> titleList, Context context, ArrayList<String> playlistUrlList, ArrayList<Integer> lastIndexList, ArrayList<String> playlistFolderList) {
         this.uriList = uriList;
         this.titleList = titleList;
         this.context = context;
+        this.playlistUrlList = playlistUrlList;
+        this.lastIndexList = lastIndexList;
+        this.playlistFolderList = playlistFolderList;
     }
 
     @NonNull
@@ -44,26 +50,29 @@ public class DownloadsRecyclerAdapter extends RecyclerView.Adapter<DownloadsRecy
 
         holder.title.setText(titleList.get(position));
         holder.location.setText(uriList.get(position));
-
         holder.layout.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
 
-                Toast.makeText(context, "Manually navigate to the provided directory (I couldn't find a workaround lol)", Toast.LENGTH_LONG).show();
+                Toast.makeText(context, "Playlist can be found at the provided directory", Toast.LENGTH_LONG).show();
 
             }
         });
 
-        holder.delete.setOnClickListener(new View.OnClickListener() {
+        if(lastIndexList.get(position) == 1001){
+            holder.continueDownload.setVisibility(View.GONE);
+        }
+
+        holder.continueDownload.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick(View view) {
-                Intent intent = new Intent("delete-event");
-                intent.putExtra("name",holder.title.getText().toString());
+            public void onClick(View v) {
+
+                Intent intent = new Intent("download-event");
+                intent.putExtra("playlistUrl",playlistUrlList.get(position));
+                intent.putExtra("lastIndex",lastIndexList.get(position));
+                intent.putExtra("playlistFolder",playlistFolderList.get(position));
                 LocalBroadcastManager.getInstance(context).sendBroadcast(intent);
 
-                uriList.remove(position);
-                titleList.remove(position);
-                notifyDataSetChanged();
 
             }
         });
@@ -78,9 +87,8 @@ public class DownloadsRecyclerAdapter extends RecyclerView.Adapter<DownloadsRecy
 
     public class ViewHolder extends RecyclerView.ViewHolder{
 
-        private TextView title,location;
+        private TextView title,location,continueDownload;
         private ConstraintLayout layout;
-        private ImageView delete;
 
 
         public ViewHolder(@NonNull View itemView) {
@@ -88,8 +96,8 @@ public class DownloadsRecyclerAdapter extends RecyclerView.Adapter<DownloadsRecy
 
             title = (TextView) itemView.findViewById(R.id.textViewDownloadsListLayoutTitle);
             layout = (ConstraintLayout) itemView.findViewById(R.id.constraintLayoutDownloadsListLayout);
-            delete = (ImageView) itemView.findViewById(R.id.imageViewDownloadsListLayoutDelete);
             location = (TextView) itemView.findViewById(R.id.textViewDownloadsListUrl);
+            continueDownload = (TextView) itemView.findViewById(R.id.textViewDownloadsListContinue);
 
         }
     }

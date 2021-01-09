@@ -16,11 +16,14 @@ import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.StrictMode;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.Toast;
 
 import com.spotify.sdk.android.authentication.AuthenticationClient;
 import com.spotify.sdk.android.authentication.AuthenticationResponse;
@@ -184,11 +187,27 @@ public class MainActivity extends AppCompatActivity {
                     Constants.ACCESS_TOKEN = token;
                     break;
                 case ERROR:
+                    spotifyError();
                     Log.d("AUTH_CHECK","ERROR: " + response.getError());
                     break;
+                default:
+                    spotifyError();
+                    break;
+
             }
         }
 
+    }
+
+    private void spotifyError() {
+        Toast.makeText(this, "Spotify Authentication is required. Please restart.", Toast.LENGTH_LONG).show();
+        final Handler handler = new Handler(Looper.getMainLooper());
+        handler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                finish();
+            }
+        }, 1000);
     }
 
     public static void verifyStoragePermissions(Activity activity) {
@@ -218,4 +237,9 @@ public class MainActivity extends AppCompatActivity {
         }
 
     }
+
+    public ViewPager getViewPager(){
+        return viewPager;
+    }
+
 }

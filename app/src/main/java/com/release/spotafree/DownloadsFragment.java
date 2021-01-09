@@ -19,7 +19,8 @@ public class DownloadsFragment extends Fragment {
 
     private RecyclerView recyclerView;
     private View view;
-    private ArrayList<String> titleList,uriList;
+    private ArrayList<String> titleList,uriList,playlistUrlList,playlistFolderList;
+    private ArrayList<Integer> lastIndexList;
     private DownloadsRecyclerAdapter recyclerAdapter;
     private SQLHelper databaseHelper;
 
@@ -41,8 +42,11 @@ public class DownloadsFragment extends Fragment {
 
         titleList = new ArrayList<>();
         uriList = new ArrayList<>();
+        playlistUrlList = new ArrayList<>();
+        lastIndexList = new ArrayList<>();
+        playlistFolderList = new ArrayList<>();
 
-        recyclerAdapter = new DownloadsRecyclerAdapter(uriList,titleList,getActivity().getApplicationContext());
+        recyclerAdapter = new DownloadsRecyclerAdapter(uriList,titleList,getActivity().getApplicationContext(),playlistUrlList,lastIndexList,playlistFolderList);
         recyclerView = (RecyclerView) view.findViewById(R.id.recyclerViewDownloads);
         recyclerView.setLayoutManager(new LinearLayoutManager(getActivity()));
         recyclerView.setAdapter(recyclerAdapter);
@@ -56,10 +60,19 @@ public class DownloadsFragment extends Fragment {
         Log.d("MAIN_LOG","GET RESULT SIZE " + res.getCount());
         while(res.moveToNext()){
             titleList.add(res.getString(1));
-            uriList.add(res.getString(2));
+            playlistUrlList.add(res.getString(2));
+            playlistFolderList.add(res.getString(3));
+            uriList.add(res.getString(4));
+            lastIndexList.add(res.getInt(5));
+
             recyclerAdapter.notifyDataSetChanged();
         }
 
     }
 
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+
+    }
 }
