@@ -166,37 +166,11 @@ public class MainActivity extends AppCompatActivity {
         youtube = (ImageView) toolbar.findViewById(R.id.imageViewMainApplicationBarYoutube);
         downloads = (Button) findViewById(R.id.buttonMainDownloads);
         search = (Button) findViewById(R.id.buttonMainSearch);
-
     }
 
     private void setupToolbar() {
         toolbar = (androidx.appcompat.widget.Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-
-        if(requestCode == Constants.AUTH_REQUEST_CODE){
-            AuthenticationResponse response = AuthenticationClient.getResponse(resultCode,data);
-            switch (response.getType()){
-                case TOKEN:
-                    String token = response.getAccessToken();
-                    Log.d("AUTH_CHECK","ACCESS TOKEN IS "+ token);
-                    Constants.ACCESS_TOKEN = token;
-                    break;
-                case ERROR:
-                    spotifyError();
-                    Log.d("AUTH_CHECK","ERROR: " + response.getError());
-                    break;
-                default:
-                    spotifyError();
-                    break;
-
-            }
-        }
-
     }
 
     private void spotifyError() {
