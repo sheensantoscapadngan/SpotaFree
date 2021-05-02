@@ -247,13 +247,6 @@ public class SearchFragment extends Fragment {
     }
 
     private void setupSpotifyAccess() throws ParseException, SpotifyWebApiException, IOException {
-        /*
-        AuthenticationRequest.Builder builder =
-                new AuthenticationRequest.Builder(SyncStateContract.Constants.CLIENT_ID, AuthenticationResponse.Type.TOKEN, SyncStateContract.Constants.REDIRECT_URI);
-        builder.setScopes(new String[]{"streaming"});
-        AuthenticationRequest request = builder.build();
-        AuthenticationClient.openLoginActivity(Objects.requireNonNull(getActivity()), SyncStateContract.Constants.AUTH_REQUEST_CODE, request);
-         */
         new Thread(() -> {
             spotifyApi = new SpotifyApi.Builder().setClientId(getString(R.string.clientId)).setClientSecret(getString(R.string.clientSecret)).build();
             ClientCredentialsRequest clientCredentialsRequest = spotifyApi.clientCredentials().build();
@@ -269,19 +262,6 @@ public class SearchFragment extends Fragment {
 
     }
 
-    private String extract_playlist_id(String url) {
-
-        String[] entries = url.split("/");
-        String id = entries[entries.length - 1];
-        if (id.indexOf('?') == -1) return id;
-        else {
-            String[] finalEntries = id.split("[?]");
-            Log.d("MAIN_LOG", "FINAL ID IS " + finalEntries[0]);
-            return finalEntries[0];
-        }
-
-    }
-
     private void process_link(final int type, final int index, String playlistUrl, final String playlistFolder) {
         
         if(isDownloading){
@@ -290,9 +270,12 @@ public class SearchFragment extends Fragment {
         }
 
         isDownloading = true;
-        String linktext = "https://open.spotify.com/playlist/7qqiJR7li0Ah8E94gFfv8g?si=xFWKyGbeS3eB7jyP69W3lQ&utm_source=whatsapp&nd=1";
+        if (playlistUrl == null){
+            playlistUrl  = link.getText().toString();
+        }
+        String finalPlaylistUrl = playlistUrl;
         new Thread(() ->{
-            String playlistId = linktext.split("playlist/")[1].split("\\?")[0];
+            String playlistId = finalPlaylistUrl.split("playlist/")[1].split("\\?")[0];
             GetPlaylistsItemsRequest getPlaylistsItemsRequests = spotifyApi.getPlaylistsItems(playlistId).build();
             Paging<PlaylistTrack> playlistTrackPaging = null;
             try {
@@ -315,89 +298,13 @@ public class SearchFragment extends Fragment {
                 }
             }
             try {
-                downloadQueries(arrayList, playlistFolder, index, playlistUrl);
+                downloadQueries(arrayList, playlistFolder, index, finalPlaylistUrl);
             } catch (YoutubeDLException | InterruptedException | IOException e) {
                 e.printStackTrace();
             }
 
         }).start();
 
-        /*
-        String url = playlistUrl;
-        if(url == null)  url = link.getText().toString();
-
-        String playlist_id = extract_playlist_id(url);
-        String request_url = "https://api.spotify.com/v1/playlists/" + playlist_id + "/tracks?market=US";
-
-        RequestQueue queue = Volley.newRequestQueue(getActivity().getApplicationContext());
-        final String finalUrl = url;
-        JsonObjectRequest request = new JsonObjectRequest(Request.Method.GET, request_url, null, response -> {
-            Log.d("JSON_LOG", "RESPONDED!!");
-            if (response != null) {
-                try {
-                    if(type == 0) process_json_result(response, null, 0, finalUrl);
-                    else process_json_result(response,playlistFolder,index,finalUrl);
-
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        }, error -> {
-            Log.d("JSON_LOG", error.toString() + " " + error.networkResponse.statusCode);
-            Toast.makeText(getActivity().getApplicationContext(), "Error Downloading. Try Restarting the App.", Toast.LENGTH_SHORT).show();
-        }) {
-            @Override
-            public Map<String, String> getHeaders() throws AuthFailureError {
-                Map<String, String> params = new HashMap<String, String>();
-                params.put("Content-Type", "application/json");
-                System.out.println(accesstoken + "Help");
-                params.put("Authorization", "Bearer " + accesstoken);
-                params.put("Accept", "application/json");
-                return params;
-            }
-
-            @Override
-            protected Map<String, String> getParams() throws AuthFailureError {
-                Map<String, String> params = new HashMap<String, String>();
-                return params;
-            }
-        };
-
-        queue.add(request);
-
-         */
-
-    }
-
-
-    private void process_json_result(JSONObject result, String existingPlaylistFolder, int lastIndex, String playlistUrl) throws JSONException, InterruptedException, YoutubeDLException, IOException {
-
-        Log.d("MAIN_LOG", result.toString(1));
-        ArrayList<String> queries = new ArrayList<>();
-        Toast.makeText(getActivity().getApplicationContext(), "Downloading Playlist...", Toast.LENGTH_SHORT).show();
-
-        JSONArray array = result.getJSONArray("items");
-        for (int x = 0; x < array.length(); x++) {
-            JSONObject object = array.getJSONObject(x);
-
-            String song_title = "";
-            String album_type = object.getJSONObject("track").getJSONObject("album").getString("album_type");
-            if (album_type.equals("single"))
-                song_title = object.getJSONObject("track").getJSONObject("album").getString("name");
-            else if (album_type.equals("album")) {
-                song_title = object.getJSONObject("track").getString("name");
-            } else {
-                continue;
-            }
-
-            String artist = object.getJSONObject("track").getJSONArray("artists").getJSONObject(0).getString("name");
-            String query = song_title + " " + artist;
-            Log.d("SONG_LOG",query);
-            queries.add(query);
-
-        }
-
-        downloadQueries(queries, existingPlaylistFolder, lastIndex, playlistUrl);
     }
 
     private void downloadQueries(final ArrayList<String> queries, final String existingPlaylistFolder, final int lastIndex, final String playlistUrl) throws YoutubeDLException, InterruptedException, IOException {
