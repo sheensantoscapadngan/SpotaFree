@@ -25,6 +25,7 @@ import androidx.viewpager.widget.ViewPager;
 
 import android.os.Environment;
 import android.os.IBinder;
+import android.provider.SyncStateContract;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -47,11 +48,19 @@ import com.android.volley.toolbox.Volley;
 import com.spotify.sdk.android.authentication.AuthenticationClient;
 import com.spotify.sdk.android.authentication.AuthenticationRequest;
 import com.spotify.sdk.android.authentication.AuthenticationResponse;
+import com.wrapper.spotify.SpotifyApi;
+import com.wrapper.spotify.exceptions.SpotifyWebApiException;
+import com.wrapper.spotify.model_objects.credentials.ClientCredentials;
+import com.wrapper.spotify.model_objects.specification.Paging;
+import com.wrapper.spotify.model_objects.specification.PlaylistTrack;
+import com.wrapper.spotify.requests.authorization.client_credentials.ClientCredentialsRequest;
+import com.wrapper.spotify.requests.data.playlists.GetPlaylistsItemsRequest;
 import com.yausername.youtubedl_android.DownloadProgressCallback;
 import com.yausername.youtubedl_android.YoutubeDL;
 import com.yausername.youtubedl_android.YoutubeDLException;
 import com.yausername.youtubedl_android.YoutubeDLRequest;
 
+import org.apache.hc.core5.http.ParseException;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -61,7 +70,9 @@ import java.io.IOException;
 import java.security.cert.TrustAnchor;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 
 import javax.xml.transform.sax.TransformerHandler;
@@ -87,14 +98,22 @@ public class SearchFragment extends Fragment {
     private NotificationManager notificationManager;
     private Notification.Builder notificationBuilder;
     private boolean isDownloading = false;
+    private String accesstoken = "";
+    private SpotifyApi spotifyApi;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
 
+
         View view = inflater.inflate(R.layout.fragment_search, container, false);
         this.view = view;
-        setupSpotifyAccess();
+        try {
+            setupSpotifyAccess();
+        } catch (ParseException | SpotifyWebApiException | IOException e) {
+            e.printStackTrace();
+        }
+
         initViews();
         activateListeners();
         setupDatabaseHelper();
@@ -102,7 +121,10 @@ public class SearchFragment extends Fragment {
         setupInstructions();
         setupNotification();
         endNotification();
+
         return view;
+
+
 
     }
 
@@ -163,65 +185,52 @@ public class SearchFragment extends Fragment {
     }
 
     private void initViews() {
-
-        link = (EditText) view.findViewById(R.id.editTextSearch);
-        save = (Button) view.findViewById(R.id.buttonSearchSave);
-        progressBar = (ProgressBar) view.findViewById(R.id.progressBarSearch);
-        textProgress = (TextView) view.findViewById(R.id.textViewSearchProgressText);
-        instructions = (TextView) view.findViewById(R.id.textViewSearchInstructionsLink);
-        clipboard = (ImageView) view.findViewById(R.id.imageViewSearchClipboard);
-        updates = (TextView) view.findViewById(R.id.textViewSearchUpdates);
-        viewSourceCode = (TextView) view.findViewById(R.id.textViewSearchViewSourceCode);
+        link = view.findViewById(R.id.editTextSearch);
+        save = view.findViewById(R.id.buttonSearchSave);
+        progressBar = view.findViewById(R.id.progressBarSearch);
+        textProgress = view.findViewById(R.id.textViewSearchProgressText);
+        instructions = view.findViewById(R.id.textViewSearchInstructionsLink);
+        clipboard = view.findViewById(R.id.imageViewSearchClipboard);
+        updates = view.findViewById(R.id.textViewSearchUpdates);
+        viewSourceCode = view.findViewById(R.id.textViewSearchViewSourceCode);
 
     }
 
     private void activateListeners() {
 
-        save.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
+        save.setOnClickListener(view -> {
 
-                link.clearFocus();
-                process_link(0, 0, null, null);
+            link.clearFocus();
+            process_link(0, 0, null, null);
 
-            }
         });
 
-        instructions.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
+        instructions.setOnClickListener(v -> {
 
-                instructionsLayout.setVisibility(View.VISIBLE);
-                SharedVariables.instructionState = 1;
+            instructionsLayout.setVisibility(View.VISIBLE);
+            SharedVariables.instructionState = 1;
 
-            }
         });
 
-        clipboard.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
+        clipboard.setOnClickListener(v -> {
 
-                ClipboardManager clipboard = (ClipboardManager) getActivity().getSystemService(Context.CLIPBOARD_SERVICE);
-                String pasteData = "";
-                if (!(clipboard.hasPrimaryClip())) {
+            ClipboardManager clipboard = (ClipboardManager) getActivity().getSystemService(Context.CLIPBOARD_SERVICE);
+            String pasteData = "";
+            if (!(clipboard.hasPrimaryClip())) {
 
-                } else {
-                    ClipData.Item item = clipboard.getPrimaryClip().getItemAt(0);
-                    pasteData = item.getText().toString();
-                }
-                link.setText(pasteData);
-
+            } else {
+                ClipData.Item item = clipboard.getPrimaryClip().getItemAt(0);
+                pasteData = item.getText().toString();
             }
+            link.setText(pasteData);
+
         });
 
-        updates.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
+        updates.setOnClickListener(v -> {
 
-                Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://drive.google.com/drive/u/3/folders/15DAXWER8lTAxioY8cE7uGUMOjdSjB6TJ"));
-                startActivity(intent);
+            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://drive.google.com/drive/u/3/folders/15DAXWER8lTAxioY8cE7uGUMOjdSjB6TJ"));
+            startActivity(intent);
 
-            }
         });
 
         viewSourceCode.setOnClickListener(new View.OnClickListener() {
@@ -237,25 +246,19 @@ public class SearchFragment extends Fragment {
 
     }
 
-    private void setupSpotifyAccess() {
-        AuthenticationRequest.Builder builder =
-                new AuthenticationRequest.Builder(Constants.CLIENT_ID, AuthenticationResponse.Type.TOKEN, Constants.REDIRECT_URI);
-        builder.setScopes(new String[]{"streaming"});
-        AuthenticationRequest request = builder.build();
-        AuthenticationClient.openLoginActivity(getActivity(), Constants.AUTH_REQUEST_CODE, request);
-    }
+    private void setupSpotifyAccess() throws ParseException, SpotifyWebApiException, IOException {
+        new Thread(() -> {
+            spotifyApi = new SpotifyApi.Builder().setClientId(getString(R.string.clientId)).setClientSecret(getString(R.string.clientSecret)).build();
+            ClientCredentialsRequest clientCredentialsRequest = spotifyApi.clientCredentials().build();
+            try {
+                ClientCredentials clientCredentials = clientCredentialsRequest.execute();
+                spotifyApi.setAccessToken(clientCredentials.getAccessToken());
+                accesstoken = spotifyApi.getAccessToken();
+            } catch (IOException | SpotifyWebApiException | ParseException e) {
+                e.printStackTrace();
+            }
 
-    private String extract_playlist_id(String url) {
-
-        String[] entries = url.split("/");
-        String id = entries[entries.length - 1];
-        if (id.indexOf('?') == -1) return id;
-        else {
-            String[] finalEntries = id.split("[?]");
-            Log.d("MAIN_LOG", "FINAL ID IS " + finalEntries[0]);
-            return finalEntries[0];
-
-        }
+        }).start();
 
     }
 
@@ -267,178 +270,128 @@ public class SearchFragment extends Fragment {
         }
 
         isDownloading = true;
+        if (playlistUrl == null){
+            playlistUrl  = link.getText().toString();
+        }
+        String finalPlaylistUrl = playlistUrl;
+        new Thread(() ->{
+            String playlistId = finalPlaylistUrl.split("playlist/")[1].split("\\?")[0];
+            GetPlaylistsItemsRequest getPlaylistsItemsRequests = spotifyApi.getPlaylistsItems(playlistId).build();
+            Paging<PlaylistTrack> playlistTrackPaging = null;
+            try {
+                playlistTrackPaging = getPlaylistsItemsRequests.execute();
+            } catch (IOException | SpotifyWebApiException | ParseException e) {
+                e.printStackTrace();
+            }
 
-        String url = playlistUrl;
-        if(url == null)  url = link.getText().toString();
+            ArrayList arrayList = new ArrayList();
 
-        String playlist_id = extract_playlist_id(url);
-        String request_url = "https://api.spotify.com/v1/playlists/" + playlist_id + "/tracks?market=US";
-
-        RequestQueue queue = Volley.newRequestQueue(getActivity().getApplicationContext());
-        final String finalUrl = url;
-        JsonObjectRequest request = new JsonObjectRequest(Request.Method.GET, request_url, null, new Response.Listener<JSONObject>() {
-            @Override
-            public void onResponse(JSONObject response) {
-                Log.d("JSON_LOG", "RESPONDED!!");
-                if (response != null) {
-                    try {
-
-                        if(type == 0) process_json_result(response, null, 0, finalUrl);
-                        else process_json_result(response,playlistFolder,index,finalUrl);
-
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
+            for (int i=0;i<=playlistTrackPaging.getTotal()/100;i++) {
+                try {
+                    playlistTrackPaging = spotifyApi.getPlaylistsItems(playlistId).offset(i * 100).build().execute();
+                } catch (IOException | SpotifyWebApiException | ParseException e) {
+                    e.printStackTrace();
+                }
+                for (int j=0;j<playlistTrackPaging.getItems().length;j++){
+                    arrayList.add(playlistTrackPaging.getItems()[j].getTrack().getName());
+                    System.out.println(playlistTrackPaging.getItems()[j].getTrack().getName());
                 }
             }
-        }, new Response.ErrorListener() {
-            @Override
-            public void onErrorResponse(VolleyError error) {
-                Log.d("JSON_LOG", error.toString() + " " + error.networkResponse.statusCode);
-                Toast.makeText(getActivity().getApplicationContext(), "Error Downloading. Try Restarting the App.", Toast.LENGTH_SHORT).show();
-            }
-        }) {
-            @Override
-            public Map<String, String> getHeaders() throws AuthFailureError {
-                Map<String, String> params = new HashMap<String, String>();
-                params.put("Content-Type", "application/json");
-                params.put("Authorization", "Bearer " + Constants.ACCESS_TOKEN);
-                params.put("Accept", "application/json");
-                return params;
+            try {
+                downloadQueries(arrayList, playlistFolder, index, finalPlaylistUrl);
+            } catch (YoutubeDLException | InterruptedException | IOException e) {
+                e.printStackTrace();
             }
 
-            @Override
-            protected Map<String, String> getParams() throws AuthFailureError {
-                Map<String, String> params = new HashMap<String, String>();
-                return params;
-            }
-        };
+        }).start();
 
-        queue.add(request);
-
-    }
-
-
-    private void process_json_result(JSONObject result, String existingPlaylistFolder, int lastIndex, String playlistUrl) throws JSONException, InterruptedException, YoutubeDLException, IOException {
-
-        Log.d("MAIN_LOG", result.toString(1));
-        ArrayList<String> queries = new ArrayList<>();
-        Toast.makeText(getActivity().getApplicationContext(), "Downloading Playlist...", Toast.LENGTH_SHORT).show();
-
-        JSONArray array = result.getJSONArray("items");
-        for (int x = 0; x < array.length(); x++) {
-            JSONObject object = array.getJSONObject(x);
-
-            String song_title = "";
-            String album_type = object.getJSONObject("track").getJSONObject("album").getString("album_type");
-            if (album_type.equals("single"))
-                song_title = object.getJSONObject("track").getJSONObject("album").getString("name");
-            else if (album_type.equals("album")) {
-                song_title = object.getJSONObject("track").getString("name");
-            } else {
-                continue;
-            }
-
-            String artist = object.getJSONObject("track").getJSONArray("artists").getJSONObject(0).getString("name");
-            String query = song_title + " " + artist;
-            Log.d("SONG_LOG",query);
-            queries.add(query);
-
-        }
-
-        downloadQueries(queries, existingPlaylistFolder, lastIndex, playlistUrl);
     }
 
     private void downloadQueries(final ArrayList<String> queries, final String existingPlaylistFolder, final int lastIndex, final String playlistUrl) throws YoutubeDLException, InterruptedException, IOException {
-
+        System.out.println(queries.size());
+        getActivity().runOnUiThread(()->{
         save.setClickable(false);
         textProgress.setText("Downloading " + lastIndex + "/" + queries.size());
         textProgress.setVisibility(View.VISIBLE);
         progressBar.setVisibility(View.VISIBLE);
-
         itemNumber = lastIndex;
         globalUrlCopy = playlistUrl;
         float progress = ((float) itemNumber / (float) queries.size()) * 100;
         progressBar.setProgress((int) progress);
+        });
 
+        final Thread thread = new Thread(() -> {
 
-        final Thread thread = new Thread(new Runnable() {
-            @Override
-            public void run() {
+            //String extStorageDirectory = getActivity().getExternalFilesDirs("/")[0].toString();
+            String extStorageDirectory = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).getPath();
+            String playlistName = generatePlaylistName();
 
-                //String extStorageDirectory = getActivity().getExternalFilesDirs("/")[0].toString();
-                String extStorageDirectory = Environment.getExternalStorageDirectory().getPath();
-                String playlistName = generatePlaylistName();
+            String musicFolderDir = extStorageDirectory + File.separator + "SpotaFree Music";
+            File folder = new File(musicFolderDir);
+            if (!folder.exists()) {
+                folder.mkdir();
+            }
 
-                String musicFolderDir = extStorageDirectory + File.separator + "SpotaFree Music";
-                File folder = new File(musicFolderDir);
+            String playlistFolderDir = "";
+            if(existingPlaylistFolder == null) {
+                playlistFolderDir = musicFolderDir + File.separator + playlistName;
+                folder = new File(playlistFolderDir);
                 if (!folder.exists()) {
                     folder.mkdir();
                 }
+                String duplicateDir = "/storage" + File.separator + "SpotaFree Music" + File.separator + playlistName;
+                addPlayListToDB(playlistName, playlistFolderDir, duplicateDir, playlistUrl);
+            }else
+                playlistFolderDir = existingPlaylistFolder;
 
-                String playlistFolderDir = "";
-                if(existingPlaylistFolder == null) {
-                    playlistFolderDir = musicFolderDir + File.separator + playlistName;
-                    folder = new File(playlistFolderDir);
-                    if (!folder.exists()) {
-                        folder.mkdir();
-                    }
-                    String duplicateDir = "/storage" + File.separator + "SpotaFree Music" + File.separator + playlistName;
-                    addPlayListToDB(playlistName, playlistFolderDir, duplicateDir, playlistUrl);
-                }else
-                    playlistFolderDir = existingPlaylistFolder;
+            for (int x = lastIndex; x < queries.size(); x++) {
 
-                for (int x = lastIndex; x < queries.size(); x++) {
+                updateNotification(queries.size(),x);
 
-                    updateNotification(queries.size(),x);
+                String query = queries.get(x);
+                System.out.println( "DOWNLOADING QUERY:" + query);
+                YoutubeDLRequest request = new YoutubeDLRequest("ytsearch1:" + query);
+                request.addOption("-ciw");
+                request.addOption("--extract-audio");
+                request.addOption("-o", playlistFolderDir + "/%(title)s.&(ext)s");
+                request.addOption("--audio-format", "mp3");
+                try {
+                    YoutubeDL.getInstance().execute(request, (progress1, etaInSeconds) -> System.out.println(progress1 + "% (ETA " + etaInSeconds + " seconds)"));
 
-                    String query = queries.get(x);
-                    Log.d("MAIN_LOG", "DOWNLOADING QUERY:" + query);
-                    YoutubeDLRequest request = new YoutubeDLRequest("ytsearch1:" + query);
-                    request.addOption("-ciw");
-                    request.addOption("--extract-audio");
-                    request.addOption("-o", playlistFolderDir + "/%(title)s.&(ext)s");
-                    request.addOption("--audio-format", "mp3");
-                    try {
-                        YoutubeDL.getInstance().execute(request);
-                    } catch (YoutubeDLException e) {
-                        e.printStackTrace();
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-
-                    itemNumber = x;
-                    getActivity().runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            float progress = ((float) itemNumber / (float) queries.size()) * 100;
-                            progressBar.setProgress((int) progress);
-                            textProgress.setText("Downloading " + (itemNumber + 1) + "/" + queries.size());
-
-                        }
-                    });
-                    saveLastIndexToDB();
-                    Log.d("MAIN_LOG", "DONE DOWNLOADING " + query);
-
+                } catch (YoutubeDLException e) {
+                    e.printStackTrace();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
                 }
 
-                endNotification();
-                itemNumber = 1000;
-                saveLastIndexToDB();
-                isDownloading = false;
+                itemNumber = x;
+                getActivity().runOnUiThread(() -> {
+                    float progress1 = ((float) itemNumber / (float) queries.size()) * 100;
+                    progressBar.setProgress((int) progress1);
+                    textProgress.setText("Downloading " + (itemNumber + 1) + "/" + queries.size());
 
-                getActivity().runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        Toast.makeText(getActivity().getApplicationContext(), "PLAYLIST DOWNLOADED", Toast.LENGTH_SHORT).show();
-                        textProgress.setVisibility(View.INVISIBLE);
-                        progressBar.setVisibility(View.GONE);
-                        save.setClickable(true);
-                        isDownloading = false;
-                    }
                 });
+                saveLastIndexToDB();
+                System.out.println( "DONE DOWNLOADING " + query);
 
             }
+
+            endNotification();
+            itemNumber = 1000;
+            saveLastIndexToDB();
+            isDownloading = false;
+
+            getActivity().runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    Toast.makeText(getActivity().getApplicationContext(), "PLAYLIST DOWNLOADED", Toast.LENGTH_SHORT).show();
+                    textProgress.setVisibility(View.INVISIBLE);
+                    progressBar.setVisibility(View.GONE);
+                    save.setClickable(true);
+                    isDownloading = false;
+                }
+            });
+
         });
 
         thread.start();

@@ -1,16 +1,17 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 28
-
-
+    compileSdkVersion 30
     defaultConfig {
         applicationId "com.release.spotafree"
         minSdkVersion 21
-        targetSdkVersion 28
+        targetSdkVersion 30
         versionCode 1
         versionName "1.0"
-
+        compileOptions {
+            sourceCompatibility JavaVersion.VERSION_1_8
+            targetCompatibility JavaVersion.VERSION_1_8
+        }
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
         ndk {
@@ -24,6 +25,9 @@ android {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
+    }
+    packagingOptions {
+        exclude 'META-INF/DEPENDENCIES'
     }
 
     splits {
@@ -39,18 +43,19 @@ android {
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
-
-    implementation 'androidx.appcompat:appcompat:1.1.0'
-    implementation 'androidx.constraintlayout:constraintlayout:1.1.3'
+    implementation 'androidx.appcompat:appcompat:1.2.0'
+    implementation 'androidx.constraintlayout:constraintlayout:2.0.4'
     implementation 'androidx.legacy:legacy-support-v4:1.0.0'
-    testImplementation 'junit:junit:4.12'
-    androidTestImplementation 'androidx.test.ext:junit:1.1.1'
-    androidTestImplementation 'androidx.test.espresso:espresso-core:3.2.0'
-    implementation 'androidx.recyclerview:recyclerview:1.1.0'
-    implementation 'com.android.volley:volley:1.1.1'
-    implementation 'androidx.browser:browser:1.0.0'
+    testImplementation 'junit:junit:4.13.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.2'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.3.0'
+    implementation 'androidx.recyclerview:recyclerview:1.2.0'
+    implementation 'com.android.volley:volley:1.2.0'
+    implementation 'androidx.browser:browser:1.3.0'
     implementation 'com.spotify.android:auth:1.1.0'
-    implementation 'com.github.yausername.youtubedl-android:library:0.12.+'
-    implementation 'com.github.yausername.youtubedl-android:ffmpeg:0.12.+'
+    implementation "io.karn:khttp-android:0.1.0"
+    implementation 'se.michaelthelin.spotify:spotify-web-api-java:6.5.3'
+    implementation 'com.github.yausername.youtubedl-android:library:0.12.3'
+    implementation 'com.github.yausername.youtubedl-android:ffmpeg:0.12.3'
 
 }
